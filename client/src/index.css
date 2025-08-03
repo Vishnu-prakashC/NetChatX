@@ -1,26 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Clean Tailwind-specific custom styles */
-body {
-  @apply bg-gray-100 text-gray-800 font-sans m-0;
-}
-
-/* Optional: Add custom fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-
-/* Optional: Set a global button style if needed */
-button {
-  @apply px-4 py-2 rounded-md font-medium transition duration-200;
-}
-
-/* You can still add hover or active states */
-button:hover {
-  @apply bg-blue-600 text-white;
-}
-
-/* Example link styling */
-a {
-  @apply text-blue-500 hover:underline;
-}
