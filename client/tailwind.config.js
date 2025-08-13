@@ -11,6 +11,8 @@ module.exports = {
       primary: '#2563eb', // Custom blue
     },
   },d
-  sv
+  },
+  plugins: [],
+  darkMode: 'class', // Enable dark mode support
 
   }

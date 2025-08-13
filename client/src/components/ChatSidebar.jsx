@@ -1,55 +1,32 @@
 import React, { useState } from 'react';
+import './Components.css';
+
 
 const ChatSidebar = ({ currentUser, selectedChat, onSelectChat, onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Sample chat data
+
   const chats = [
     {
       id: 1,
-      name: 'John Doe',
+      name: 'tharunika',
       avatar: 'JD',
-      lastMessage: 'Hey! How are you doing?',
+      lastMessage: 'Hey! vichuu',
       time: '2 min ago',
       unread: 2,
       online: true
     },
     {
       id: 2,
-      name: 'Sarah Wilson',
+      name: 'Shiva ',
       avatar: 'SW',
-      lastMessage: 'Thanks for the help yesterday!',
+      lastMessage: 'hii',
       time: '1 hour ago',
       unread: 0,
       online: false
     },
-    {
-      id: 3,
-      name: 'Mike Johnson',
-      avatar: 'MJ',
-      lastMessage: 'Can we meet tomorrow?',
-      time: '3 hours ago',
-      unread: 1,
-      online: true
-    },
-    {
-      id: 4,
-      name: 'Emma Davis',
-      avatar: 'ED',
-      lastMessage: 'The project is ready for review',
-      time: '5 hours ago',
-      unread: 0,
-      online: false
-    },
-    {
-      id: 5,
-      name: 'Alex Thompson',
-      avatar: 'AT',
-      lastMessage: 'Great work on the presentation!',
-      time: '1 day ago',
-      unread: 0,
-      online: true
-    }
+    
+
   ];
 
   const filteredChats = chats.filter(chat =>

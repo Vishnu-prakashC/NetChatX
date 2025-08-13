@@ -1,0 +1,364 @@
+.LoginForm{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #f0f4f8; 
+    padding: 20px;
+    border-radius: 8px;
+}
+.LoginForm input {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #53708c;
+    border-radius: 4px;
+    font-size: 20px;
+}
+.LoginForm button {
+    width: 100%;
+    padding: 10px;
+    background-color: #2563eb; 
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 20px;
+    cursor: pointer;
+}
+.login-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #aac8e5; 
+    
+}
+.login.card {
+    text-decoration: double;
+    transition-duration: 0.3s;
+    text-align: center;
+    background-color: #f0f4f8; 
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+.login-form {
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+    background-color: #bbd0e6; 
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+.name {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #53708c;
+    border-radius: 4px;
+    font-size: 20px;
+    background-color: #ffffff;
+    color: #333333;
+    transition: border-color 0.3s ease;
+    
+
+
+
+}
+.form-group {
+    width: 100%;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+}
+.login-btn{
+    background-color: #a89fe3;
+    color: rgb(0, 0, 0);
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: background-color 0.3s ease;
+    shadow: 0 2px 10px rgb(255, 0, 0);
+    
+
+}
+.form-group .name{
+    margin-bottom: 10px;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #53708c;
+    border-radius: 4px;
+    font-size: 20px;
+    background-color: #ffffff;
+    color: #333333;
+    transition: border-color 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    
+}
+.form-group label {
+    width: 100%;
+    font-size: 18px;
+    font-weight: 600;
+   
+    margin-bottom: 6px;
+    color: #000000;
+    text-align: left;
+    display: block;
+}
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #53708c;
+    border-radius: 4px;
+    font-size: 20px;
+    background-color: #ffffff;
+    color: #333333;
+    transition: border-color 0.3s ease;
+}
+
+
+/* Sidebar container */
+.sidebar {
+  width: 300px;
+  background-color: #f9fafb;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: sans-serif;
+}
+
+/* Header */
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background-color: #3b82f6;
+  color: white;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  background-color: #60a5fa;
+  color: white;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: white;
+}
+
+/* Search */
+.search-container {
+  padding: 8px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+/* Chat list */
+.chats-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.chat-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chat-item:hover {
+  background-color: #f3f4f6;
+}
+
+.chat-item.active {
+  background-color: #e0f2fe;
+}
+
+.chat-avatar {
+  background-color: #93c5fd;
+  color: white;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  position: relative;
+}
+
+.chat-info {
+  flex: 1;
+}
+
+.chat-name {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.chat-last-message {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.chat-time {
+  text-align: right;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+
+/* Main chat container */
+.chat-main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f9f9f9;
+  border-left: 1px solid #ddd;
+}
+
+/* Empty state */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #888;
+  text-align: center;
+}
+.empty-state svg {
+  width: 50px;
+  height: 50px;
+  margin-bottom: 10px;
+  color: #bbb;
+}
+
+/* Chat header */
+.chat-header {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background: #ffffff;
+  border-bottom: 1px solid #ddd;
+}
+.chat-header-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 10px;
+}
+.chat-header-info h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.chat-header-info p {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+/* Messages */
+.messages-container {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+}
+.message {
+  margin-bottom: 10px;
+  display: flex;
+}
+.message.own {
+  justify-content: flex-end;
+}
+.message-content {
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  max-width: 70%;
+  font-size: 14px;
+  position: relative;
+}
+.message.own .message-content {
+  background: #d1f5d3;
+}
+.message-time {
+  font-size: 10px;
+  color: #777;
+  margin-top: 4px;
+}
+
+/* Input area */
+.message-input-container {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #ddd;
+  background: #fff;
+}
+.message-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+.send-btn {
+  background: #4cafef;
+  border: none;
+  color: white;
+  padding: 8px;
+  margin-left: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.send-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+.send-btn svg {
+  stroke: white;
+}

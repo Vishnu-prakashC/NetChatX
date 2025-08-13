@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './Components.css';
 
 const LoginForm = ({ onLogin }) => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -86,7 +87,7 @@ const LoginForm = ({ onLogin }) => {
             className="login-btn"
             disabled={loading}
           >
-            {loading ? 'Loading...' : (isSignUp ? 'Create Account' : 'Sign In')}
+            {loading ? 'Loading...↻' : (isSignUp ? 'Create Account' : 'Sign In')}
           </button>
         </form>
         

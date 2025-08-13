@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import './Components.css';
 
 const ChatMain = ({ selectedChat, currentUser }) => {
   const [messages, setMessages] = useState([]);
@@ -8,31 +9,17 @@ const ChatMain = ({ selectedChat, currentUser }) => {
   // Sample messages for each chat
   const sampleMessages = {
     1: [
-      { id: 1, text: 'Hey! How are you doing?', sender: 'John Doe', timestamp: Date.now() - 60000 },
-      { id: 2, text: 'I\'m doing great! How about you?', sender: 'You', timestamp: Date.now() - 45000 },
-      { id: 3, text: 'Pretty good! Working on some new projects.', sender: 'John Doe', timestamp: Date.now() - 30000 },
-      { id: 4, text: 'That sounds exciting! What kind of projects?', sender: 'You', timestamp: Date.now() - 15000 }
+      { id: 1, text: 'Hey vichu!', sender: 'tharu', timestamp: Date.now() - 60000 },
+      { id: 2, text: 'hii', sender: 'You', timestamp: Date.now() - 45000 },
+    //  { id: 3, text: 'Pretty good! Working on some new projects.', sender: 'John Doe', timestamp: Date.now() - 30000 },
+     // { id: 4, text: 'That sounds exciting! What kind of projects?', sender: 'You', timestamp: Date.now() - 15000 }
     ],
     2: [
-      { id: 1, text: 'Thanks for the help yesterday!', sender: 'Sarah Wilson', timestamp: Date.now() - 3600000 },
-      { id: 2, text: 'No problem at all! Happy to help.', sender: 'You', timestamp: Date.now() - 3500000 },
-      { id: 3, text: 'The solution worked perfectly.', sender: 'Sarah Wilson', timestamp: Date.now() - 3400000 }
+      { id: 1, text: 'hii ', sender: 'shiva', timestamp: Date.now() - 3600000 },
+      { id: 2, text: 'enna pandra', sender: 'You', timestamp: Date.now() - 3500000 },
+      { id: 3, text: '...', sender: 'shiva', timestamp: Date.now() - 3400000 }
     ],
-    3: [
-      { id: 1, text: 'Can we meet tomorrow?', sender: 'Mike Johnson', timestamp: Date.now() - 10800000 },
-      { id: 2, text: 'Sure! What time works for you?', sender: 'You', timestamp: Date.now() - 10700000 },
-      { id: 3, text: 'How about 2 PM?', sender: 'Mike Johnson', timestamp: Date.now() - 10600000 },
-      { id: 4, text: 'Perfect! See you then.', sender: 'You', timestamp: Date.now() - 10500000 }
-    ],
-    4: [
-      { id: 1, text: 'The project is ready for review', sender: 'Emma Davis', timestamp: Date.now() - 18000000 },
-      { id: 2, text: 'Great! I\'ll take a look at it.', sender: 'You', timestamp: Date.now() - 17900000 }
-    ],
-    5: [
-      { id: 1, text: 'Great work on the presentation!', sender: 'Alex Thompson', timestamp: Date.now() - 86400000 },
-      { id: 2, text: 'Thank you! I put a lot of effort into it.', sender: 'You', timestamp: Date.now() - 86300000 },
-      { id: 3, text: 'It really showed. Well done!', sender: 'Alex Thompson', timestamp: Date.now() - 86200000 }
-    ]
+
   };
 
   useEffect(() => {
