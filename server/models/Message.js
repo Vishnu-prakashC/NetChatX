@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
   sender: String,
@@ -6,4 +6,13 @@ const messageSchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 
-export default mongoose.model('Message', messageSchema);
+// Only create model if mongoose is connected
+let Message;
+try {
+  Message = mongoose.model('Message', messageSchema);
+} catch (error) {
+  // Model already exists
+  Message = mongoose.model('Message');
+}
+
+module.exports = Message;

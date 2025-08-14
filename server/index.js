@@ -1,19 +1,43 @@
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
-import { Server } from 'socket.io';
-import http from 'http';
-import dotenv from 'dotenv';
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+const { Server } = require('socket.io');
+const http = require('http');
+require('dotenv').config();
 
-dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch(err => console.log(err));
+// MongoDB connection with fallback
+const connectToMongoDB = async () => {
+  try {
+    if (process.env.MONGO_URI) {
+      await mongoose.connect(process.env.MONGO_URI);
+      console.log("✅ MongoDB Connected");
+    } else {
+      console.log("⚠️  No MONGO_URI found in environment variables");
+      console.log("📝 Please create a .env file with your MongoDB connection string");
+      
+      // Try to connect to local MongoDB as fallback
+      try {
+        await mongoose.connect('mongodb://localhost:27017/chat_app');
+        console.log("✅ Connected to local MongoDB");
+      } catch (localError) {
+        console.log("❌ Local MongoDB connection failed");
+        console.log("💡 Starting server without database connection...");
+        console.log("💡 Messages will be stored in memory only");
+      }
+    }
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err.message);
+    console.log("💡 Starting server without database connection...");
+    console.log("💡 Messages will be stored in memory only");
+  }
+};
+
+// Connect to MongoDB
+connectToMongoDB();
 
 // Example route
 app.get('/', (req, res) => {
