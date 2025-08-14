@@ -1,34 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
+import io from 'socket.io-client';
 import './Components.css';
+
+const socket = io('http://localhost:5000'); // backend server
 
 const ChatMain = ({ selectedChat, currentUser }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Sample messages for each chat
-  const sampleMessages = {
-    1: [
-      { id: 1, text: 'Hey vichu!', sender: 'tharu', timestamp: Date.now() - 60000 },
-      { id: 2, text: 'hii', sender: 'You', timestamp: Date.now() - 45000 },
-    //  { id: 3, text: 'Pretty good! Working on some new projects.', sender: 'John Doe', timestamp: Date.now() - 30000 },
-     // { id: 4, text: 'That sounds exciting! What kind of projects?', sender: 'You', timestamp: Date.now() - 15000 }
-    ],
-    2: [
-      { id: 1, text: 'hii ', sender: 'shiva', timestamp: Date.now() - 3600000 },
-      { id: 2, text: 'enna pandra', sender: 'You', timestamp: Date.now() - 3500000 },
-      { id: 3, text: '...', sender: 'shiva', timestamp: Date.now() - 3400000 }
-    ],
-
-  };
-
+  // Join the selected chat room
   useEffect(() => {
     if (selectedChat) {
-      setMessages(sampleMessages[selectedChat.id] || []);
-    } else {
-      setMessages([]);
+      socket.emit('joinRoom', selectedChat.id);
+      setMessages([]); // Clear old messages
     }
   }, [selectedChat]);
+
+  // Listen for incoming messages
+  useEffect(() => {
+    socket.on('message', (message) => {
+      setMessages((prev) => [...prev, message]);
+    });
+
+    return () => {
+      socket.off('message');
+    };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -40,13 +38,14 @@ const ChatMain = ({ selectedChat, currentUser }) => {
 
   const handleSendMessage = () => {
     if (newMessage.trim() && selectedChat) {
-      const message = {
-        id: Date.now(),
+      const messageData = {
+        roomId: selectedChat.id,
+        sender: currentUser,
         text: newMessage.trim(),
-        sender: 'You',
         timestamp: Date.now()
       };
-      setMessages([...messages, message]);
+      socket.emit('sendMessage', messageData);
+      setMessages((prev) => [...prev, { ...messageData, sender: 'You' }]);
       setNewMessage('');
     }
   };
@@ -59,10 +58,7 @@ const ChatMain = ({ selectedChat, currentUser }) => {
   };
 
   const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   if (!selectedChat) {
@@ -83,34 +79,27 @@ const ChatMain = ({ selectedChat, currentUser }) => {
     <div className="chat-main">
       {/* Chat Header */}
       <div className="chat-header">
-        <div className="chat-header-avatar">
-          {selectedChat.avatar}
-        </div>
+        <div className="chat-header-avatar">{selectedChat.avatar}</div>
         <div className="chat-header-info">
           <h3>{selectedChat.name}</h3>
           <p>{selectedChat.online ? 'Online' : 'Offline'}</p>
         </div>
       </div>
 
-      {/* Messages Container */}
+      {/* Messages */}
       <div className="messages-container">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`message ${message.sender === 'You' ? 'own' : ''}`}
-          >
+        {messages.map((message, index) => (
+          <div key={index} className={`message ${message.sender === 'You' ? 'own' : ''}`}>
             <div className="message-content">
               <div>{message.text}</div>
-              <div className="message-time">
-                {formatTime(message.timestamp)}
-              </div>
+              <div className="message-time">{formatTime(message.timestamp)}</div>
             </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
+      {/* Input */}
       <div className="message-input-container">
         <textarea
           className="message-input"
@@ -120,11 +109,7 @@ const ChatMain = ({ selectedChat, currentUser }) => {
           onKeyPress={handleKeyPress}
           rows="1"
         />
-        <button
-          className="send-btn"
-          onClick={handleSendMessage}
-          disabled={!newMessage.trim()}
-        >
+        <button className="send-btn" onClick={handleSendMessage} disabled={!newMessage.trim()}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="22" y1="2" x2="11" y2="13"></line>
             <polygon points="22,2 15,22 11,13 2,9"></polygon>
@@ -135,4 +120,4 @@ const ChatMain = ({ selectedChat, currentUser }) => {
   );
 };
 
-export default ChatMain; 
+export default ChatMain;
