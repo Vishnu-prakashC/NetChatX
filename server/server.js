@@ -52,6 +52,10 @@ const Message = mongoose.model('Message', messageSchema);
 app.get('/', (_req, res) => {
   res.send('Backend running ✅');
 });
+app.get("/ping", (req, res) => {
+  res.json({ message: "Server is alive 🚀" });
+});
+
 
 // Fetch recent messages (last 100 by default)
 app.get('/api/messages', async (req, res) => {
