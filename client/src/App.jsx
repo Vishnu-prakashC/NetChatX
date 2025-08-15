@@ -25,6 +25,7 @@ function App() {
   }
 
   return (
+    
     <div className="app">
       <ChatSidebar 
         currentUser={currentUser}
@@ -32,6 +33,8 @@ function App() {
         onSelectChat={setSelectedChat}
         onLogout={handleLogout}
       />
+
+
       <ChatMain 
         selectedChat={selectedChat}
         currentUser={currentUser}

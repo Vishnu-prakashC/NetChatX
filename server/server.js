@@ -38,9 +38,9 @@ mongoose
 // ----- Schemas / Models -----
 const messageSchema = new mongoose.Schema(
   {
-    // Simple global room chat; add roomId later if needed
-    sender: { type: String, required: true }, // e.g., email or username
-    text:   { type: String, required: true },
+    roomId: { type: String, required: true }, // added for room-based chats
+    sender: { type: String, required: true },
+    text: { type: String, required: true },
   },
   { timestamps: true }
 );
@@ -48,21 +48,20 @@ const messageSchema = new mongoose.Schema(
 const Message = mongoose.model('Message', messageSchema);
 
 // ----- REST Endpoints -----
-// Health check
 app.get('/', (_req, res) => {
   res.send('Backend running ✅');
 });
-app.get("/ping", (req, res) => {
-  res.json({ message: "Server is alive 🚀" });
+app.get('/ping', (req, res) => {
+  res.json({ message: 'Server is alive 🚀' });
 });
 
-
-// Fetch recent messages (last 100 by default)
-app.get('/api/messages', async (req, res) => {
+// Fetch recent messages for a room
+app.get('/api/messages/:roomId', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || '100', 10), 500);
-    const msgs = await Message.find().sort({ createdAt: -1 }).limit(limit);
-    // Return oldest->newest for UI
+    const msgs = await Message.find({ roomId: req.params.roomId })
+      .sort({ createdAt: -1 })
+      .limit(limit);
     res.json(msgs.reverse());
   } catch (e) {
     console.error(e);
@@ -74,23 +73,34 @@ app.get('/api/messages', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('🟢 User connected:', socket.id);
 
-  // Receive a message from a client and broadcast + persist
-  // Expect payload: { sender: "vichu@example.com", text: "Hello!" }
-  socket.on('send_message', async (data) => {
+  // Join a specific chat room
+  socket.on('joinRoom', async (roomId) => {
+    socket.join(roomId);
+    console.log(`User ${socket.id} joined room ${roomId}`);
+
+    // Send recent messages to the joining user
+    const recentMessages = await Message.find({ roomId })
+      .sort({ createdAt: -1 })
+      .limit(50);
+    socket.emit('message', recentMessages.reverse());
+  });
+
+  // Handle sending message to a specific room
+  socket.on('sendMessage', async (data) => {
     try {
-      if (!data || !data.sender || !data.text) return;
+      if (!data || !data.roomId || !data.sender || !data.text) return;
 
       const saved = await Message.create({
+        roomId: String(data.roomId),
         sender: String(data.sender),
         text: String(data.text),
       });
 
-      // Emit to everyone (or use rooms later)
-      io.emit('receive_message', {
+      io.to(data.roomId).emit('message', {
         _id: saved._id,
         sender: saved.sender,
         text: saved.text,
-        createdAt: saved.createdAt,
+        timestamp: saved.createdAt,
       });
     } catch (e) {
       console.error('Error saving message:', e.message);
@@ -98,10 +108,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // (Optional) typing indicator
-  // payload: { sender: "vichu" }
   socket.on('typing', (payload) => {
-    socket.broadcast.emit('user_typing', payload);
+    if (payload?.roomId) {
+      socket.to(payload.roomId).emit('user_typing', payload);
+    }
   });
 
   socket.on('disconnect', () => {

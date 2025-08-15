@@ -1,5 +1,8 @@
 .env
 git add .
-git commit -m "Initial commit"
+git commit -m "Test a simple API route"
 git branch -M main
 git push -u origin main
+
+
+
