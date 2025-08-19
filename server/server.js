@@ -6,14 +6,14 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
-require('dotenv').config(); // Loads .env
+require('dotenv').config(); // Load environment variables
 
 // ----- Config -----
 const PORT = process.env.PORT || 5000;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/chat_app';
 
-// ----- App / HTTP / IO -----
+// ----- App Setup -----
 const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
@@ -23,22 +23,26 @@ const io = new Server(httpServer, {
   },
 });
 
-app.use(cors({ origin: CLIENT_ORIGIN }));
+app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
 app.use(express.json());
 
 // ----- MongoDB -----
 mongoose
-  .connect(MONGO_URI, { autoIndex: true })
+  .connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    autoIndex: true,
+  })
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
     process.exit(1);
   });
 
-// ----- Schemas / Models -----
+// ----- Schema & Model -----
 const messageSchema = new mongoose.Schema(
   {
-    roomId: { type: String, required: true }, // added for room-based chats
+    roomId: { type: String, required: true },
     sender: { type: String, required: true },
     text: { type: String, required: true },
   },
@@ -47,11 +51,10 @@ const messageSchema = new mongoose.Schema(
 
 const Message = mongoose.model('Message', messageSchema);
 
-// ----- REST Endpoints -----
-app.get('/', (_req, res) => {
-  res.send('Backend running ✅');
-});
-app.get('/ping', (req, res) => {
+// ----- REST API -----
+app.get('/', (_req, res) => res.send('Backend running ✅'));
+
+app.get('/ping', (_req, res) => {
   res.json({ message: 'Server is alive 🚀' });
 });
 
@@ -64,7 +67,7 @@ app.get('/api/messages/:roomId', async (req, res) => {
       .limit(limit);
     res.json(msgs.reverse());
   } catch (e) {
-    console.error(e);
+    console.error('Fetch error:', e.message);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
 });
@@ -73,29 +76,38 @@ app.get('/api/messages/:roomId', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('🟢 User connected:', socket.id);
 
-  // Join a specific chat room
+  // Join a chat room
   socket.on('joinRoom', async (roomId) => {
     socket.join(roomId);
     console.log(`User ${socket.id} joined room ${roomId}`);
 
-    // Send recent messages to the joining user
+    // Send last 50 messages
     const recentMessages = await Message.find({ roomId })
       .sort({ createdAt: -1 })
       .limit(50);
     socket.emit('message', recentMessages.reverse());
   });
 
-  // Handle sending message to a specific room
+  // Send a message
   socket.on('sendMessage', async (data) => {
     try {
       if (!data || !data.roomId || !data.sender || !data.text) return;
 
+      let senderString;
+      if (typeof data.sender === 'object' && data.sender !== null) {
+        // Extract meaningful property if sender is object
+        senderString = data.sender.email || data.sender.name || JSON.stringify(data.sender);
+      } else {
+        senderString = String(data.sender);
+      }
+
       const saved = await Message.create({
         roomId: String(data.roomId),
-        sender: String(data.sender),
+        sender: senderString,
         text: String(data.text),
       });
 
+      // Broadcast to room
       io.to(data.roomId).emit('message', {
         _id: saved._id,
         sender: saved.sender,
@@ -108,12 +120,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Typing indicator
   socket.on('typing', (payload) => {
     if (payload?.roomId) {
       socket.to(payload.roomId).emit('user_typing', payload);
     }
   });
 
+  // Disconnect
   socket.on('disconnect', () => {
     console.log('🔴 User disconnected:', socket.id);
   });
