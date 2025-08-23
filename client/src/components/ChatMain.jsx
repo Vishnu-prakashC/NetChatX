@@ -38,13 +38,18 @@ const ChatMain = ({ selectedChat, currentUser }) => {
 
   const handleSendMessage = () => {
     if (newMessage.trim() && selectedChat) {
+      // ✅ Fix: Only send a string as sender
+      const senderString = currentUser?.email || currentUser?.name || 'anonymous';
+
       const messageData = {
         roomId: selectedChat.id,
-        sender: currentUser,
+        sender: senderString,
         text: newMessage.trim(),
         timestamp: Date.now()
       };
+
       socket.emit('sendMessage', messageData);
+
       setMessages((prev) => [...prev, { ...messageData, sender: 'You' }]);
       setNewMessage('');
     }
