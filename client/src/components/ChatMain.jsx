@@ -41,12 +41,13 @@ const ChatMain = ({ selectedChat, currentUser }) => {
       // ✅ Fix: Only send a string as sender
       const senderString = currentUser?.email || currentUser?.name || 'anonymous';
 
-      const messageData = {
-        roomId: selectedChat.id,
-        sender: senderString,
-        text: newMessage.trim(),
-        timestamp: Date.now()
-      };
+const messageData = {
+  roomId: selectedChat?.name || selectedChat?.email || selectedChat?.id, // ✅ use user identity
+  sender: currentUser?.email || currentUser?.name || 'anonymous',
+  text: newMessage.trim(),
+  timestamp: Date.now()
+};
+
 
       socket.emit('sendMessage', messageData);
 

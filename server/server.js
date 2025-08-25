@@ -78,11 +78,12 @@ io.on('connection', (socket) => {
 
   // Join a chat room
   socket.on('joinRoom', async (roomId) => {
-    socket.join(roomId);
-    console.log(`User ${socket.id} joined room ${roomId}`);
+    const readableRoomId = String(roomId); // ✅ ensure always string
+    socket.join(readableRoomId);
+    console.log(`User ${socket.id} joined room ${readableRoomId}`);
 
     // Send last 50 messages
-    const recentMessages = await Message.find({ roomId })
+    const recentMessages = await Message.find({ roomId: readableRoomId })
       .sort({ createdAt: -1 })
       .limit(50);
     socket.emit('message', recentMessages.reverse());
@@ -93,23 +94,29 @@ io.on('connection', (socket) => {
     try {
       if (!data || !data.roomId || !data.sender || !data.text) return;
 
+      // ✅ Make sure roomId is always readable (like username/email)
+      const readableRoomId = String(data.roomId);
+
+      // ✅ Extract sender as a clean string
       let senderString;
       if (typeof data.sender === 'object' && data.sender !== null) {
-        // Extract meaningful property if sender is object
-        senderString = data.sender.email || data.sender.name || JSON.stringify(data.sender);
+        senderString =
+          data.sender.email || data.sender.name || JSON.stringify(data.sender);
       } else {
         senderString = String(data.sender);
       }
 
+      // Save to DB
       const saved = await Message.create({
-        roomId: String(data.roomId),
+        roomId: readableRoomId,
         sender: senderString,
         text: String(data.text),
       });
 
-      // Broadcast to room
-      io.to(data.roomId).emit('message', {
+      // Broadcast to that room
+      io.to(readableRoomId).emit('message', {
         _id: saved._id,
+        roomId: saved.roomId,
         sender: saved.sender,
         text: saved.text,
         timestamp: saved.createdAt,
@@ -123,7 +130,8 @@ io.on('connection', (socket) => {
   // Typing indicator
   socket.on('typing', (payload) => {
     if (payload?.roomId) {
-      socket.to(payload.roomId).emit('user_typing', payload);
+      const readableRoomId = String(payload.roomId);
+      socket.to(readableRoomId).emit('user_typing', payload);
     }
   });
 
