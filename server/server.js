@@ -6,7 +6,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
-require('dotenv').config(); // Load environment variables
+require('dotenv').config();
 
 // ----- Config -----
 const PORT = process.env.PORT || 5000;
@@ -65,6 +65,7 @@ app.get('/api/messages/:roomId', async (req, res) => {
     const msgs = await Message.find({ roomId: req.params.roomId })
       .sort({ createdAt: -1 })
       .limit(limit);
+
     res.json(msgs.reverse());
   } catch (e) {
     console.error('Fetch error:', e.message);
@@ -78,7 +79,7 @@ io.on('connection', (socket) => {
 
   // Join a chat room
   socket.on('joinRoom', async (roomId) => {
-    const readableRoomId = String(roomId); // ✅ ensure always string
+    const readableRoomId = String(roomId);
     socket.join(readableRoomId);
     console.log(`User ${socket.id} joined room ${readableRoomId}`);
 
@@ -86,6 +87,7 @@ io.on('connection', (socket) => {
     const recentMessages = await Message.find({ roomId: readableRoomId })
       .sort({ createdAt: -1 })
       .limit(50);
+
     socket.emit('message', recentMessages.reverse());
   });
 
@@ -94,26 +96,21 @@ io.on('connection', (socket) => {
     try {
       if (!data || !data.roomId || !data.sender || !data.text) return;
 
-      // ✅ Make sure roomId is always readable (like username/email)
       const readableRoomId = String(data.roomId);
 
-      // ✅ Extract sender as a clean string
       let senderString;
       if (typeof data.sender === 'object' && data.sender !== null) {
-        senderString =
-          data.sender.email || data.sender.name || JSON.stringify(data.sender);
+        senderString = data.sender.email || data.sender.name || JSON.stringify(data.sender);
       } else {
         senderString = String(data.sender);
       }
 
-      // Save to DB
       const saved = await Message.create({
         roomId: readableRoomId,
         sender: senderString,
         text: String(data.text),
       });
 
-      // Broadcast to that room
       io.to(readableRoomId).emit('message', {
         _id: saved._id,
         roomId: saved.roomId,

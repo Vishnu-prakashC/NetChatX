@@ -2,25 +2,28 @@ import React, { useState, useRef, useEffect } from 'react';
 import io from 'socket.io-client';
 import './Components.css';
 
-const socket = io('http://localhost:5000'); // backend server
+const socket = io('http://localhost:5000');
 
 const ChatMain = ({ selectedChat, currentUser }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Join the selected chat room
   useEffect(() => {
     if (selectedChat) {
-      socket.emit('joinRoom', selectedChat.id);
-      setMessages([]); // Clear old messages
+      const roomId = selectedChat?.name || selectedChat?.email || selectedChat?.id;
+      socket.emit('joinRoom', roomId);
+      setMessages([]);
     }
-  }, [selectedChat]);
+  }, [selectedChat, currentUser.name]);
 
-  // Listen for incoming messages
   useEffect(() => {
     socket.on('message', (message) => {
-      setMessages((prev) => [...prev, message]);
+      if (Array.isArray(message)) {
+        setMessages(message);
+      } else {
+        setMessages((prev) => [...prev, message]);
+      }
     });
 
     return () => {
@@ -38,19 +41,16 @@ const ChatMain = ({ selectedChat, currentUser }) => {
 
   const handleSendMessage = () => {
     if (newMessage.trim() && selectedChat) {
-      // ✅ Fix: Only send a string as sender
       const senderString = currentUser?.email || currentUser?.name || 'anonymous';
 
-const messageData = {
-  roomId: selectedChat?.name || selectedChat?.email || selectedChat?.id, // ✅ use user identity
-  sender: currentUser?.email || currentUser?.name || 'anonymous',
-  text: newMessage.trim(),
-  timestamp: Date.now()
-};
-
+      const messageData = {
+        roomId: selectedChat?.name || selectedChat?.email || selectedChat?.id,
+        sender: senderString,
+        text: newMessage.trim(),
+        timestamp: Date.now(),
+      };
 
       socket.emit('sendMessage', messageData);
-
       setMessages((prev) => [...prev, { ...messageData, sender: 'You' }]);
       setNewMessage('');
     }
@@ -64,6 +64,7 @@ const messageData = {
   };
 
   const formatTime = (timestamp) => {
+    if (!timestamp) return '';
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -83,7 +84,6 @@ const messageData = {
 
   return (
     <div className="chat-main">
-      {/* Chat Header */}
       <div className="chat-header">
         <div className="chat-header-avatar">{selectedChat.avatar}</div>
         <div className="chat-header-info">
@@ -92,20 +92,21 @@ const messageData = {
         </div>
       </div>
 
-      {/* Messages */}
       <div className="messages-container">
         {messages.map((message, index) => (
-          <div key={index} className={`message ${message.sender === 'You' ? 'own' : ''}`}>
+          <div
+            key={index}
+            className={`message ${message.sender === 'You' ? 'own' : ''}`}
+          >
             <div className="message-content">
               <div>{message.text}</div>
-              <div className="message-time">{formatTime(message.timestamp)}</div>
+              <div className="message-time">{formatTime(message.timestamp || message.createdAt)}</div>
             </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <div className="message-input-container">
         <textarea
           className="message-input"
@@ -115,8 +116,19 @@ const messageData = {
           onKeyPress={handleKeyPress}
           rows="1"
         />
-        <button className="send-btn" onClick={handleSendMessage} disabled={!newMessage.trim()}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <button
+          className="send-btn"
+          onClick={handleSendMessage}
+          disabled={!newMessage.trim()}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <line x1="22" y1="2" x2="11" y2="13"></line>
             <polygon points="22,2 15,22 11,13 2,9"></polygon>
           </svg>

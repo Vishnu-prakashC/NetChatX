@@ -1,6 +1,7 @@
 .env
 git add .
-git commit -m "Updated server to store readable roomIds instead of numeric IDs"
+git commit -m "fix: room join, messages, timestamp
+"
 git branch -M main
 git push -u origin main
 
