@@ -1,7 +1,6 @@
 .env
 git add .
-git commit -m "fix: room join, messages, timestamp
-"
+git commit -m "load chat history, typing indicator, stable sockets, and persisted auth"
 git branch -M main
 git push -u origin main
 

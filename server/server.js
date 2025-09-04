@@ -7,6 +7,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 require('dotenv').config();
+const dns = require('dns');
+
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 // ----- Config -----
 const PORT = process.env.PORT || 5000;
@@ -27,17 +30,35 @@ app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
 app.use(express.json());
 
 // ----- MongoDB -----
-mongoose
-  .connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    autoIndex: true,
-  })
-  .then(() => console.log('✅ MongoDB connected'))
-  .catch((err) => {
-    console.error('❌ MongoDB connection error:', err.message);
-    process.exit(1);
-  });
+const connectToMongoDB = async () => {
+  try {
+    if (process.env.MONGO_URI) {
+      await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+      console.log("✅ MongoDB Connected");
+    } else {
+      console.log("⚠️  No MONGO_URI found in environment variables");
+      console.log("📝 Please create a .env file with your MongoDB connection string");
+      console.log("📝 Example: MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/database_name");
+      
+      // Try to connect to local MongoDB as fallback
+      try {
+        await mongoose.connect('mongodb://localhost:27017/chat_app', { serverSelectionTimeoutMS: 3000 });
+        console.log("✅ Connected to local MongoDB");
+      } catch (localError) {
+        console.log("❌ Local MongoDB connection failed");
+        console.log("💡 Starting server without database connection...");
+        console.log("💡 Messages will be stored in memory only");
+      }
+    }
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err.message);
+    console.log("💡 Starting server without database connection...");
+    console.log("💡 Messages will be stored in memory only");
+  }
+};
+
+// Connect to MongoDB
+connectToMongoDB();
 
 // ----- Schema & Model -----
 const messageSchema = new mongoose.Schema(

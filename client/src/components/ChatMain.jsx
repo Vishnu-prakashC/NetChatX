@@ -1,21 +1,28 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import io from 'socket.io-client';
+import socket from '../socket';
 import './Components.css';
 
-const socket = io('http://localhost:5000');
+// using shared singleton socket from ../socket
 
 const ChatMain = ({ selectedChat, currentUser }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [typingUser, setTypingUser] = useState(null);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (selectedChat) {
       const roomId = selectedChat?.name || selectedChat?.email || selectedChat?.id;
+      fetch(`http://localhost:5000/api/messages/${roomId}`)
+        .then((res) => res.json())
+        .then((data) => { console.log('Fetched history:', data); setMessages(Array.isArray(data) ? data : []); })
+        .catch((err) => console.error('Error fetching history:', err));
+
       socket.emit('joinRoom', roomId);
-      setMessages([]);
     }
-  }, [selectedChat, currentUser.name]);
+  }, [selectedChat]);
 
   useEffect(() => {
     socket.on('message', (message) => {
@@ -35,8 +42,33 @@ const ChatMain = ({ selectedChat, currentUser }) => {
     scrollToBottom();
   }, [messages]);
 
+  // Listen for others typing in the same room
+  useEffect(() => {
+    const handleUserTyping = (data) => {
+      const currentRoomId = selectedChat?.name || selectedChat?.email || selectedChat?.id;
+      if (data?.roomId === currentRoomId && data?.user && data?.user !== currentUser?.name) {
+        setTypingUser(data.user);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => setTypingUser(null), 2000);
+      }
+    };
+
+    socket.on('user_typing', handleUserTyping);
+    return () => {
+      socket.off('user_typing', handleUserTyping);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, [selectedChat, currentUser?.name]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleTyping = () => {
+    if (!selectedChat) return;
+    const roomId = selectedChat?.name || selectedChat?.email || selectedChat?.id;
+    const userName = currentUser?.name || currentUser?.email || 'Someone';
+    socket.emit('typing', { roomId, user: userName });
   };
 
   const handleSendMessage = () => {
@@ -92,6 +124,10 @@ const ChatMain = ({ selectedChat, currentUser }) => {
         </div>
       </div>
 
+      {typingUser && (
+        <div className="typing-indicator">{typingUser} is typing...</div>
+      )}
+
       <div className="messages-container">
         {messages.map((message, index) => (
           <div
@@ -112,7 +148,7 @@ const ChatMain = ({ selectedChat, currentUser }) => {
           className="message-input"
           placeholder="Type a message..."
           value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+          onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
           onKeyPress={handleKeyPress}
           rows="1"
         />
