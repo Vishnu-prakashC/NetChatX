@@ -1,6 +1,6 @@
 .env
 git add .
-git commit -m "load chat history, typing indicator, stable sockets, and persisted auth"
+git commit -m "Add complete CRUD APIs for auth and messaging"
 git branch -M main
 git push -u origin main
 

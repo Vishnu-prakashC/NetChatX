@@ -1,165 +1,308 @@
-// server/server.js
-// Real-time chat server with Express, Socket.IO, and MongoDB
+/**
+ * Chat Application Server
+ * Real-time chat server with Express, Socket.IO, and MongoDB
+ * Modular architecture with separate routes, models, and middleware
+ */
 
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-const mongoose = require('mongoose');
-require('dotenv').config();
-const dns = require('dns');
+const jwt = require('jsonwebtoken');
+const config = require('./config/config');
 
-dns.setServers(['8.8.8.8', '1.1.1.1']);
+// Import custom modules
+const { connectDB } = require('./config/db');
+const User = require('./models/User');
+const Message = require('./models/Message');
+const { authenticateToken } = require('./middleware/auth');
 
-// ----- Config -----
-const PORT = process.env.PORT || 5000;
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/chat_app';
+// Import routes
+const authRoutes = require('./routes/auth');
+const messageRoutes = require('./routes/messages');
+
+// ----- Configuration -----
+const PORT = config.port;
+const CLIENT_ORIGIN = config.clientOrigin;
 
 // ----- App Setup -----
 const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
-  cors: {
-    origin: CLIENT_ORIGIN,
-    methods: ['GET', 'POST'],
-  },
+  cors: config.socket.cors
 });
 
-app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
-app.use(express.json());
+// ----- Middleware -----
+app.use(cors({ 
+  origin: CLIENT_ORIGIN, 
+  credentials: true 
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ----- MongoDB -----
-const connectToMongoDB = async () => {
-  try {
-    if (process.env.MONGO_URI) {
-      await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
-      console.log("✅ MongoDB Connected");
-    } else {
-      console.log("⚠️  No MONGO_URI found in environment variables");
-      console.log("📝 Please create a .env file with your MongoDB connection string");
-      console.log("📝 Example: MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/database_name");
-      
-      // Try to connect to local MongoDB as fallback
-      try {
-        await mongoose.connect('mongodb://localhost:27017/chat_app', { serverSelectionTimeoutMS: 3000 });
-        console.log("✅ Connected to local MongoDB");
-      } catch (localError) {
-        console.log("❌ Local MongoDB connection failed");
-        console.log("💡 Starting server without database connection...");
-        console.log("💡 Messages will be stored in memory only");
-      }
-    }
-  } catch (err) {
-    console.error("❌ MongoDB connection error:", err.message);
-    console.log("💡 Starting server without database connection...");
-    console.log("💡 Messages will be stored in memory only");
-  }
-};
+// ----- Database Connection -----
+connectDB();
 
-// Connect to MongoDB
-connectToMongoDB();
-
-// ----- Schema & Model -----
-const messageSchema = new mongoose.Schema(
-  {
-    roomId: { type: String, required: true },
-    sender: { type: String, required: true },
-    text: { type: String, required: true },
-  },
-  { timestamps: true }
-);
-
-const Message = mongoose.model('Message', messageSchema);
-
-// ----- REST API -----
-app.get('/', (_req, res) => res.send('Backend running ✅'));
+// ----- Routes -----
+app.get('/', (_req, res) => res.send('Chat App Backend Running ✅'));
 
 app.get('/ping', (_req, res) => {
-  res.json({ message: 'Server is alive 🚀' });
+  res.json({ 
+    message: 'Server is alive 🚀',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
-// Fetch recent messages for a room
-app.get('/api/messages/:roomId', async (req, res) => {
-  try {
-    const limit = Math.min(parseInt(req.query.limit || '100', 10), 500);
-    const msgs = await Message.find({ roomId: req.params.roomId })
-      .sort({ createdAt: -1 })
-      .limit(limit);
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/messages', messageRoutes);
 
-    res.json(msgs.reverse());
-  } catch (e) {
-    console.error('Fetch error:', e.message);
-    res.status(500).json({ error: 'Failed to fetch messages' });
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: dbStatus,
+      uptime: process.uptime(),
+      memory: process.memoryUsage()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      error: error.message
+    });
   }
 });
 
-// ----- Socket.IO -----
+// ----- Socket.IO Authentication Middleware -----
+io.use(async (socket, next) => {
+  try {
+    const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return next(new Error('Authentication token required'));
+    }
+
+    const decoded = jwt.verify(token, config.jwt.secret);
+    const user = await User.findById(decoded.userId).select('-password');
+    
+    if (!user || !user.isActive) {
+      return next(new Error('Invalid or inactive user'));
+    }
+
+    socket.userId = user._id.toString();
+    socket.user = user;
+    next();
+  } catch (error) {
+    next(new Error('Authentication failed'));
+  }
+});
+
+// ----- Socket.IO Event Handlers -----
 io.on('connection', (socket) => {
-  console.log('🟢 User connected:', socket.id);
+  console.log(`🟢 User connected: ${socket.user.username} (${socket.id})`);
+
+  // Update user online status
+  User.findByIdAndUpdate(socket.userId, { 
+    isOnline: true, 
+    lastSeen: new Date() 
+  }).exec();
 
   // Join a chat room
   socket.on('joinRoom', async (roomId) => {
+    try {
+      const readableRoomId = String(roomId);
+      socket.join(readableRoomId);
+      console.log(`👤 ${socket.user.username} joined room: ${readableRoomId}`);
+
+      // Send last 20 messages
+      const recentMessages = await Message.getRecentMessages(readableRoomId, 20);
+      socket.emit('roomMessages', recentMessages.reverse());
+
+      // Notify others in the room
+      socket.to(readableRoomId).emit('userJoined', {
+        user: {
+          id: socket.user._id,
+          username: socket.user.username,
+          displayName: socket.user.displayName || socket.user.username
+        },
+        message: `${socket.user.displayName || socket.user.username} joined the room`
+      });
+
+    } catch (error) {
+      console.error('Join room error:', error.message);
+      socket.emit('error', { message: 'Failed to join room' });
+    }
+  });
+
+  // Leave a chat room
+  socket.on('leaveRoom', (roomId) => {
     const readableRoomId = String(roomId);
-    socket.join(readableRoomId);
-    console.log(`User ${socket.id} joined room ${readableRoomId}`);
-
-    // Send last 50 messages
-    const recentMessages = await Message.find({ roomId: readableRoomId })
-      .sort({ createdAt: -1 })
-      .limit(50);
-
-    socket.emit('message', recentMessages.reverse());
+    socket.leave(readableRoomId);
+    console.log(`👋 ${socket.user.username} left room: ${readableRoomId}`);
+    
+    socket.to(readableRoomId).emit('userLeft', {
+      user: {
+        id: socket.user._id,
+        username: socket.user.username,
+        displayName: socket.user.displayName || socket.user.username
+      },
+      message: `${socket.user.displayName || socket.user.username} left the room`
+    });
   });
 
   // Send a message
   socket.on('sendMessage', async (data) => {
     try {
-      if (!data || !data.roomId || !data.sender || !data.text) return;
-
-      const readableRoomId = String(data.roomId);
-
-      let senderString;
-      if (typeof data.sender === 'object' && data.sender !== null) {
-        senderString = data.sender.email || data.sender.name || JSON.stringify(data.sender);
-      } else {
-        senderString = String(data.sender);
+      if (!data || !data.roomId || !data.text) {
+        return socket.emit('error', { message: 'Invalid message data' });
       }
 
-      const saved = await Message.create({
+      const readableRoomId = String(data.roomId);
+      const messageText = String(data.text).trim();
+
+      if (messageText.length === 0) {
+        return socket.emit('error', { message: 'Message cannot be empty' });
+      }
+
+      if (messageText.length > 1000) {
+        return socket.emit('error', { message: 'Message too long' });
+      }
+
+      // Create message in database
+      const message = new Message({
+        text: messageText,
+        sender: socket.userId,
+        senderName: socket.user.displayName || socket.user.username,
         roomId: readableRoomId,
-        sender: senderString,
-        text: String(data.text),
+        messageType: data.messageType || 'text'
       });
 
-      io.to(readableRoomId).emit('message', {
-        _id: saved._id,
-        roomId: saved.roomId,
-        sender: saved.sender,
-        text: saved.text,
-        timestamp: saved.createdAt,
+      await message.save();
+      await message.populate('sender', 'username displayName avatar');
+
+      // Broadcast message to room
+      io.to(readableRoomId).emit('newMessage', {
+        id: message._id,
+        text: message.text,
+        sender: {
+          id: socket.user._id,
+          username: socket.user.username,
+          displayName: socket.user.displayName || socket.user.username,
+          avatar: socket.user.avatar
+        },
+        roomId: readableRoomId,
+        timestamp: message.createdAt,
+        messageType: message.messageType
       });
-    } catch (e) {
-      console.error('Error saving message:', e.message);
-      socket.emit('error_message', { error: 'Failed to send message' });
+
+    } catch (error) {
+      console.error('Send message error:', error.message);
+      socket.emit('error', { message: 'Failed to send message' });
     }
   });
 
   // Typing indicator
-  socket.on('typing', (payload) => {
-    if (payload?.roomId) {
-      const readableRoomId = String(payload.roomId);
-      socket.to(readableRoomId).emit('user_typing', payload);
+  socket.on('typing', (data) => {
+    if (data?.roomId) {
+      const readableRoomId = String(data.roomId);
+      socket.to(readableRoomId).emit('userTyping', {
+        user: {
+          id: socket.user._id,
+          username: socket.user.username,
+          displayName: socket.user.displayName || socket.user.username
+        },
+        roomId: readableRoomId,
+        isTyping: data.isTyping || true
+      });
+    }
+  });
+
+  // Stop typing indicator
+  socket.on('stopTyping', (data) => {
+    if (data?.roomId) {
+      const readableRoomId = String(data.roomId);
+      socket.to(readableRoomId).emit('userTyping', {
+        user: {
+          id: socket.user._id,
+          username: socket.user.username,
+          displayName: socket.user.displayName || socket.user.username
+        },
+        roomId: readableRoomId,
+        isTyping: false
+      });
     }
   });
 
   // Disconnect
-  socket.on('disconnect', () => {
-    console.log('🔴 User disconnected:', socket.id);
+  socket.on('disconnect', async () => {
+    console.log(`🔴 User disconnected: ${socket.user.username} (${socket.id})`);
+    
+    // Update user offline status
+    try {
+      await User.findByIdAndUpdate(socket.userId, { 
+        isOnline: false, 
+        lastSeen: new Date() 
+      }).exec();
+    } catch (error) {
+      console.error('Error updating user status on disconnect:', error.message);
+    }
+  });
+});
+
+// ----- Error Handling -----
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
+  });
+});
+
+// ----- Graceful Shutdown -----
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  httpServer.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
+  httpServer.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
   });
 });
 
 // ----- Start Server -----
 httpServer.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log('🚀 Chat Application Server Started');
+  console.log(`📡 Server running on: http://localhost:${PORT}`);
+  console.log(`🌐 Client origin: ${CLIENT_ORIGIN}`);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('📋 Available endpoints:');
+  console.log('   GET  / - Server status');
+  console.log('   GET  /ping - Health check');
+  console.log('   GET  /health - Detailed health status');
+  console.log('   POST /api/auth/register - User registration');
+  console.log('   POST /api/auth/login - User login');
+  console.log('   GET  /api/auth/me - Get current user');
+  console.log('   GET  /api/messages/:roomId - Get room messages');
+  console.log('   POST /api/messages/:roomId - Send message');
+  console.log('🔌 Socket.IO events: joinRoom, leaveRoom, sendMessage, typing');
 });
