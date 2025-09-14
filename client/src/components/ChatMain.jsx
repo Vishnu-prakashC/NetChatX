@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import socket from '../socket';
+import { getRoomMessages, sendRoomMessage } from '../api';
 import './Components.css';
 
 // using shared singleton socket from ../socket
@@ -15,9 +16,8 @@ const ChatMain = ({ selectedChat, currentUser }) => {
   useEffect(() => {
     if (selectedChat) {
       const roomId = selectedChat?.name || selectedChat?.email || selectedChat?.id;
-      fetch(`http://localhost:5000/api/messages/${roomId}`)
-        .then((res) => res.json())
-        .then((data) => { console.log('Fetched history:', data); setMessages(Array.isArray(data) ? data : []); })
+      getRoomMessages(roomId)
+        .then((msgs) => setMessages(Array.isArray(msgs) ? msgs : []))
         .catch((err) => console.error('Error fetching history:', err));
 
       socket.emit('joinRoom', roomId);
@@ -25,16 +25,23 @@ const ChatMain = ({ selectedChat, currentUser }) => {
   }, [selectedChat]);
 
   useEffect(() => {
-    socket.on('message', (message) => {
-      if (Array.isArray(message)) {
-        setMessages(message);
-      } else {
-        setMessages((prev) => [...prev, message]);
-      }
-    });
+    const handleNewMessage = (payload) => {
+      const message = payload?.data || payload || payload?.message;
+      if (!message) return;
+      setMessages((prev) => [...prev, message]);
+    };
+
+    const handleRoomMessages = (list) => {
+      const msgs = Array.isArray(list) ? list : (list?.data || []);
+      setMessages(msgs);
+    };
+
+    socket.on('newMessage', handleNewMessage);
+    socket.on('roomMessages', handleRoomMessages);
 
     return () => {
-      socket.off('message');
+      socket.off('newMessage', handleNewMessage);
+      socket.off('roomMessages', handleRoomMessages);
     };
   }, []);
 
@@ -75,15 +82,11 @@ const ChatMain = ({ selectedChat, currentUser }) => {
     if (newMessage.trim() && selectedChat) {
       const senderString = currentUser?.email || currentUser?.name || 'anonymous';
 
-      const messageData = {
-        roomId: selectedChat?.name || selectedChat?.email || selectedChat?.id,
-        sender: senderString,
-        text: newMessage.trim(),
-        timestamp: Date.now(),
-      };
-
-      socket.emit('sendMessage', messageData);
-      setMessages((prev) => [...prev, { ...messageData, sender: 'You' }]);
+      const roomId = selectedChat?.name || selectedChat?.email || selectedChat?.id;
+      const text = newMessage.trim();
+      // Fire-and-forget to REST for persistence, socket will broadcast
+      sendRoomMessage(roomId, { text }).catch(() => {});
+      socket.emit('sendMessage', { roomId, text });
       setNewMessage('');
     }
   };

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import ChatSidebar from './components/ChatSidebar';
 import ChatMain from './components/ChatMain';
 import LoginForm from './components/LoginForm';
+import AdminApp from './admin/AdminApp';
 import './App.css';
+import { clearAuth, setAuthToken } from './api';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -37,6 +40,7 @@ function App() {
     setCurrentUser(userData);
     setIsLoggedIn(true);
     try { localStorage.setItem('chat_current_user', JSON.stringify(userData)); } catch {}
+    if (userData?.token) setAuthToken(userData.token);
   };
 
   const handleLogout = () => {
@@ -47,6 +51,7 @@ function App() {
       localStorage.removeItem('chat_current_user');
       localStorage.removeItem('chat_selected_chat');
     } catch {}
+    clearAuth();
   };
 
   const handleSelectChat = (chat) => {
@@ -54,26 +59,31 @@ function App() {
     try { localStorage.setItem('chat_selected_chat', JSON.stringify(chat)); } catch {}
   };
 
-  if (!isLoggedIn) {
-    return <LoginForm onLogin={handleLogin} />;
-  }
-
   return (
-    
-    <div className="app">
-      <ChatSidebar 
-        currentUser={currentUser}
-        selectedChat={selectedChat}
-        onSelectChat={handleSelectChat}
-        onLogout={handleLogout}
-      />
-
-
-      <ChatMain 
-        selectedChat={selectedChat}
-        currentUser={currentUser}
-      />
-    </div>
+    <Routes>
+      {/* Admin Routes */}
+      <Route path="/admin/*" element={<AdminApp />} />
+      
+      {/* Main Chat App */}
+      <Route path="/*" element={
+        !isLoggedIn ? (
+          <LoginForm onLogin={handleLogin} />
+        ) : (
+          <div className="app">
+            <ChatSidebar 
+              currentUser={currentUser}
+              selectedChat={selectedChat}
+              onSelectChat={handleSelectChat}
+              onLogout={handleLogout}
+            />
+            <ChatMain 
+              selectedChat={selectedChat}
+              currentUser={currentUser}
+            />
+          </div>
+        )
+      } />
+    </Routes>
   );
 }
 

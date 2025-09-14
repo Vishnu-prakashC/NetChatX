@@ -1,6 +1,6 @@
 .env
 git add .
-git commit -m "Add complete CRUD APIs for auth and messaging"
+git commit -m "create admin panel page for managing users/data"
 git branch -M main
 git push -u origin main
 

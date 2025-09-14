@@ -9,6 +9,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const config = require('./config/config');
 
 // Import custom modules
@@ -20,6 +21,7 @@ const { authenticateToken } = require('./middleware/auth');
 // Import routes
 const authRoutes = require('./routes/auth');
 const messageRoutes = require('./routes/messages');
+const adminRoutes = require('./routes/admin');
 
 // ----- Configuration -----
 const PORT = config.port;
@@ -33,9 +35,9 @@ const io = new Server(httpServer, {
 });
 
 // ----- Middleware -----
-app.use(cors({ 
-  origin: CLIENT_ORIGIN, 
-  credentials: true 
+app.use(cors({
+  origin: process.env.CORS_ORIGIN,
+  credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -57,6 +59,7 @@ app.get('/ping', (_req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -264,8 +267,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
+// 404 handler (Express 5: avoid "*" pattern)
+app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route not found'
@@ -304,5 +307,12 @@ httpServer.listen(PORT, () => {
   console.log('   GET  /api/auth/me - Get current user');
   console.log('   GET  /api/messages/:roomId - Get room messages');
   console.log('   POST /api/messages/:roomId - Send message');
+  console.log('   POST /admin/login - Admin login');
+  console.log('   GET  /admin/dashboard - Admin dashboard');
+  console.log('   GET  /admin/users - List users');
+  console.log('   GET  /admin/users/:id - Get user details');
+  console.log('   PATCH /admin/users/:id - Update user');
+  console.log('   DELETE /admin/users/:id - Delete user');
+  console.log('   GET  /admin/audit-logs - Get audit logs');
   console.log('🔌 Socket.IO events: joinRoom, leaveRoom, sendMessage, typing');
 });

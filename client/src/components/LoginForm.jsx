@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import './Components.css';
+import api, { login as apiLogin, register as apiRegister, setAuthToken } from '../api';
+import { reconnectSocket } from '../socket';
 
 const LoginForm = ({ onLogin }) => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -13,18 +15,45 @@ const LoginForm = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const userData = {
-        id: Date.now(),
-        name: formData.name || formData.email.split('@')[0],
-        email: formData.email,
-        avatar: formData.name ? formData.name.charAt(0).toUpperCase() : formData.email.charAt(0).toUpperCase()
-      };
-      onLogin(userData);
+    try {
+      if (isSignUp) {
+        const payload = {
+          username: formData.name || formData.email.split('@')[0],
+          email: formData.email,
+          password: formData.password,
+          displayName: formData.name || undefined,
+        };
+        const result = await apiRegister(payload);
+        const { user, token } = result || {};
+        if (token) setAuthToken(token);
+        const userData = {
+          id: user?.id,
+          name: user?.displayName || user?.username,
+          email: user?.email,
+          avatar: (user?.displayName || user?.username || 'U').charAt(0).toUpperCase(),
+          token,
+        };
+        onLogin(userData);
+        reconnectSocket();
+      } else {
+        const result = await apiLogin(formData.email || '', formData.password || '');
+        const { user, token } = result || {};
+        if (token) setAuthToken(token);
+        const userData = {
+          id: user?.id,
+          name: user?.displayName || user?.username,
+          email: user?.email,
+          avatar: (user?.displayName || user?.username || 'U').charAt(0).toUpperCase(),
+          token,
+        };
+        onLogin(userData);
+        reconnectSocket();
+      }
+    } catch (err) {
+      alert(err?.message || 'Authentication failed');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleChange = (e) => {

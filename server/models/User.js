@@ -111,8 +111,8 @@ const userSchema = new mongoose.Schema({
 /**
  * Index for better query performance
  */
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
+// Note: Unique constraints already defined on email and username fields
+// Keep secondary indexes as needed
 userSchema.index({ isOnline: 1 });
 
 /**
