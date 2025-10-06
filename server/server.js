@@ -4,6 +4,9 @@
  * Modular architecture with separate routes, models, and middleware
  */
 
+require('dotenv').config();
+
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -11,6 +14,7 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const config = require('./config/config');
+const helmet = require('helmet');
 
 // Import custom modules
 const { connectDB } = require('./config/db');
@@ -35,8 +39,9 @@ const io = new Server(httpServer, {
 });
 
 // ----- Middleware -----
+app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: CLIENT_ORIGIN,
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

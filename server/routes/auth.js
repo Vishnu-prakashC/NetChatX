@@ -82,25 +82,36 @@ router.post('/register', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Registration error:', error.message);
-    
-    // Handle validation errors
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors
-      });
-    }
+  console.error('Registration error:', error); // Log the full error
 
-    res.status(500).json({
+  // Handle MongoDB duplicate key error (email or username already exists)
+  if (error.code === 11000) {
+    const field = Object.keys(error.keyPattern)[0];
+    return res.status(400).json({
       success: false,
-      message: 'Registration failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      message: `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
     });
   }
+
+  // Handle Mongoose validation errors
+  if (error.name === 'ValidationError') {
+    const errors = Object.values(error.errors).map(err => err.message);
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors
+    });
+  }
+
+  // Handle all other errors
+  res.status(500).json({
+    success: false,
+    message: 'Registration failed',
+    error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+  });
+  }
 });
+
 
 /**
  * @route   POST /api/auth/login
@@ -384,4 +395,3 @@ router.get('/users', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
-

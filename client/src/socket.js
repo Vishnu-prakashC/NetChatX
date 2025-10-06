@@ -1,29 +1,34 @@
-// client/src/socket.js
 import { io } from "socket.io-client";
-import { getAuthToken } from "./api";
 
-const URL = import.meta?.env?.VITE_API_BASE_URL || "http://localhost:5000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
-// Create a socket instance with auth token
-const createSocket = () => {
-  const token = getAuthToken();
-  return io(URL, {
-    autoConnect: !!token,
-    transports: ["websocket", "polling"],
-    withCredentials: true,
-    auth: token ? { token } : {},
-  });
+const getAuthToken = () => {
+  return localStorage.getItem("token") || localStorage.getItem("admin_token") || undefined;
 };
 
-const socket = createSocket();
+const buildSocketOptions = () => {
+  const token = getAuthToken();
+  return {
+    autoConnect: false,
+    transports: ["websocket", "polling"],
+    withCredentials: true,
+    auth: token ? { token } : undefined,
+  };
+};
+
+const socket = io(SOCKET_URL, buildSocketOptions());
 
 export const reconnectSocket = () => {
-  try {
-    socket.disconnect();
-  } catch {}
   const token = getAuthToken();
-  if (token) {
-    socket.auth = { token };
+
+  if (!token) {
+    socket.disconnect();
+    return;
+  }
+
+  socket.auth = { token };
+
+  if (!socket.connected) {
     socket.connect();
   }
 };

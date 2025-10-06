@@ -8,6 +8,8 @@ const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const config = require('../config/config');
 
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+
 /**
  * Middleware to authenticate admin users
  * Verifies JWT token and checks for admin role
@@ -111,6 +113,25 @@ const authAdmin = async (req, res, next) => {
 };
 
 /**
+ * Middleware to authenticate admin using admin JWT
+ */
+const authAdminJWT = async (req, res, next) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'No token' });
+  try {
+    const decoded = jwt.verify(token, ADMIN_JWT_SECRET);
+    const admin = await User.findById(decoded.id);
+    if (!admin || admin.role !== 'admin' || !admin.active) {
+      return res.status(403).json({ error: 'Admin only' });
+    }
+    req.admin = admin;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+/**
  * Middleware to log admin actions
  * Should be used after authAdmin middleware
  */
@@ -167,6 +188,7 @@ const adminLoginLimiter = rateLimit({
 
 module.exports = {
   authAdmin,
+  authAdminJWT,
   logAdminAction,
   adminLoginLimiter
 };

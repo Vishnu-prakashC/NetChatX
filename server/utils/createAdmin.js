@@ -3,6 +3,7 @@
  * Creates an initial admin user for the application
  */
 
+require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const readline = require('readline');

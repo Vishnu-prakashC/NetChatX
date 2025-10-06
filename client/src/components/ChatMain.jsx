@@ -1,8 +1,10 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import socket from '../socket';
-import { getRoomMessages, sendRoomMessage } from '../api';
+import { sendRoomMessage } from '../api';
 import './Components.css';
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 // using shared singleton socket from ../socket
 
@@ -13,37 +15,59 @@ const ChatMain = ({ selectedChat, currentUser }) => {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  useEffect(() => {
-    if (selectedChat) {
-      const roomId = selectedChat?.name || selectedChat?.email || selectedChat?.id;
-      getRoomMessages(roomId)
-        .then((msgs) => setMessages(Array.isArray(msgs) ? msgs : []))
-        .catch((err) => console.error('Error fetching history:', err));
-
-      socket.emit('joinRoom', roomId);
-    }
+  const activeRoomId = useMemo(() => {
+    if (!selectedChat) return null;
+    return selectedChat.name || selectedChat.email || selectedChat.id || null;
   }, [selectedChat]);
 
   useEffect(() => {
-    const handleNewMessage = (payload) => {
-      const message = payload?.data || payload || payload?.message;
-      if (!message) return;
-      setMessages((prev) => [...prev, message]);
+    if (!activeRoomId || !currentUser?.name) return;
+
+    let isMounted = true;
+    const token = localStorage.getItem('token');
+
+    axios
+      .get(`${API_URL}/api/messages/${activeRoomId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => {
+        if (isMounted) setMessages(res.data);
+      })
+      .catch(() => {
+        if (isMounted) setMessages([]);
+      });
+
+    socket.connect();
+    socket.emit('joinRoom', { roomId: activeRoomId });
+
+    const handleReceiveMessage = (msg) => {
+      if (!isMounted) return;
+      if (Array.isArray(msg)) {
+        setMessages(msg);
+      } else {
+        setMessages(prevMessages => [...prevMessages, msg]);
+      }
     };
 
-    const handleRoomMessages = (list) => {
-      const msgs = Array.isArray(list) ? list : (list?.data || []);
-      setMessages(msgs);
+    const handleUserTyping = ({ sender }) => {
+      if (sender && sender !== currentUser.name) {
+        setTypingUser(sender);
+        setTimeout(() => setTypingUser(''), 1500);
+      }
     };
 
-    socket.on('newMessage', handleNewMessage);
-    socket.on('roomMessages', handleRoomMessages);
+    socket.on('receiveMessage', handleReceiveMessage);
+    socket.on('user_typing', handleUserTyping);
 
     return () => {
-      socket.off('newMessage', handleNewMessage);
-      socket.off('roomMessages', handleRoomMessages);
+      isMounted = false;
+      socket.emit('leaveRoom', { roomId: activeRoomId });
+      socket.off('receiveMessage', handleReceiveMessage);
+      socket.off('user_typing', handleUserTyping);
+      socket.disconnect();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
-  }, []);
+  }, [activeRoomId, currentUser?.name]);
 
   useEffect(() => {
     scrollToBottom();
@@ -72,10 +96,8 @@ const ChatMain = ({ selectedChat, currentUser }) => {
   };
 
   const handleTyping = () => {
-    if (!selectedChat) return;
-    const roomId = selectedChat?.name || selectedChat?.email || selectedChat?.id;
-    const userName = currentUser?.name || currentUser?.email || 'Someone';
-    socket.emit('typing', { roomId, user: userName });
+    if (!activeRoomId || !currentUser?.name) return;
+    socket.emit('typing', { roomId: activeRoomId, sender: currentUser.name });
   };
 
   const handleSendMessage = () => {
@@ -112,6 +134,17 @@ const ChatMain = ({ selectedChat, currentUser }) => {
           </svg>
           <h3>Welcome to Chat</h3>
           <p>Select a conversation to start messaging</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeRoomId || !currentUser) {
+    return (
+      <div className="chat-main">
+        <div className="empty-state">
+          <h3>Preparing chat…</h3>
+          <p>Please select a conversation or log in again.</p>
         </div>
       </div>
     );

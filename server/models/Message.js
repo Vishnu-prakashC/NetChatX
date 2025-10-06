@@ -10,27 +10,6 @@ const mongoose = require('mongoose');
  * Defines the structure for message documents in MongoDB
  */
 const messageSchema = new mongoose.Schema({
-  // Message content
-  text: {
-    type: String,
-    required: [true, 'Message text is required'],
-    trim: true,
-    maxlength: [1000, 'Message cannot exceed 1000 characters']
-  },
-  
-  // Sender information
-  sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'Sender is required']
-  },
-  
-  senderName: {
-    type: String,
-    required: [true, 'Sender name is required'],
-    trim: true
-  },
-  
   // Room/Channel information
   roomId: {
     type: String,
@@ -39,74 +18,21 @@ const messageSchema = new mongoose.Schema({
     index: true
   },
   
-  // Message type and metadata
-  messageType: {
+  // Sender information
+  sender: {
     type: String,
-    enum: ['text', 'image', 'file', 'system'],
-    default: 'text'
+    required: [true, 'Sender is required']
   },
   
-  // File attachments (for future use)
-  attachments: [{
-    filename: String,
-    originalName: String,
-    mimeType: String,
-    size: Number,
-    url: String
-  }],
-  
-  // Message status
-  isEdited: {
-    type: Boolean,
-    default: false
-  },
-  
-  editedAt: {
-    type: Date,
-    default: null
-  },
-  
-  isDeleted: {
-    type: Boolean,
-    default: false
-  },
-  
-  deletedAt: {
-    type: Date,
-    default: null
-  },
-  
-  // Message reactions (for future use)
-  reactions: [{
-    emoji: String,
-    users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    count: { type: Number, default: 0 }
-  }],
-  
-  // Reply/Thread information (for future use)
-  replyTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message',
-    default: null
-  },
-  
-  threadId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message',
-    default: null
+  // Message content
+  text: {
+    type: String,
+    required: [true, 'Message text is required'],
+    trim: true,
+    maxlength: [1000, 'Message cannot exceed 1000 characters']
   }
 }, {
-  timestamps: true, // Automatically add createdAt and updatedAt fields
-  toJSON: { 
-    transform: function(doc, ret) {
-      // Add virtual fields and format the response
-      ret.id = ret._id;
-      ret.timestamp = ret.createdAt;
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    }
-  }
+  timestamps: true // Automatically add createdAt and updatedAt fields
 });
 
 /**

@@ -93,6 +93,47 @@ npm start
 npm run dev
 ```
 
+## MERN Real-Time Chat App
+
+### Local Setup
+
+#### Backend
+
+```sh
+cd server
+npm install
+cp .env.example .env
+# Edit .env with your MongoDB URI and secrets
+npm run dev
+```
+
+#### Frontend
+
+```sh
+cd client
+npm install
+npm run dev
+```
+
+### Seeding Admin
+
+```sh
+cd server
+node utils/createAdmin.js
+```
+
+### Deployment
+
+- Backend: Deploy `server` to Render. Set env vars from `.env.example`.
+- Frontend: Deploy `client` to Vercel. Set `VITE_API_URL` to backend URL.
+
+### Quick Test Checklist
+
+- Start server and client, open two tabs, join same room, send messages.
+- Refresh: previous messages load.
+- Admin login works, user list loads, can change role/active.
+- No secrets in git; `.env.example` exists.
+
 ## 🗄️ Database Schema
 
 ### User Collection

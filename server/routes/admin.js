@@ -123,6 +123,21 @@ router.post('/login',
   }
 );
 
+/**
+ * POST /admin/login
+ * Admin login endpoint (alternative implementation)
+ */
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Missing fields' });
+  const admin = await User.findOne({ email, role: 'admin', active: true });
+  if (!admin) return res.status(400).json({ error: 'Invalid credentials' });
+  const match = await admin.comparePassword(password);
+  if (!match) return res.status(400).json({ error: 'Invalid credentials' });
+  const token = jwt.sign({ id: admin._id }, ADMIN_JWT_SECRET, { expiresIn: '7d' });
+  res.json({ token, user: { _id: admin._id, name: admin.name, email: admin.email, role: admin.role } });
+});
+
 // ----- Protected Admin Routes -----
 
 /**
