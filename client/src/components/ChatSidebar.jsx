@@ -9,7 +9,7 @@ const ChatSidebar = ({ currentUser, selectedChat, onSelectChat, onLogout }) => {
   const chats = [
     {
       id: 1,
-      name: 'tharunika',
+      name: 'tharun',
       avatar: 'JD',
       lastMessage: 'Hey! vichuu',
       time: '2 min ago',

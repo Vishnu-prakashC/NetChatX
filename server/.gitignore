@@ -1,6 +1,6 @@
 .env
-git add.
-git commit -m "stable backend setup, verified routes, and frontend connected"
+git add .
+git commit -m "style: add modern and responsive CSS for components"
 git branch -M main
 git push -u origin main
 
