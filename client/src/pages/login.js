@@ -41,7 +41,7 @@ const Login = () => {
             <div className="brand-icon">
               <i className="fas fa-comments"></i>
             </div>
-            <h1 className="brand-name">MESME</h1>
+            <h1 className="brand-name">NetChatX</h1>
             <p className="brand-tagline">Connect, Share, Engage</p>
           </div>
 
