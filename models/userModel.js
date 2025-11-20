@@ -1,0 +1,150 @@
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
+const userSchema = new Schema(
+  {
+    fullname: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 25,
+    },
+    username: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 25,
+      unique: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+    },
+    password: {
+      type: String,
+      required: true,
+    },
+    avatar: {
+      type: String,
+      default:
+        "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460__340.png",
+    },
+    role: {
+      type: String,
+      default: "user",
+    },
+    gender: {
+      type: String,
+      default: "male",
+    },
+    mobile: {
+      type: String,
+      default: "",
+    },
+    address: {
+      type: String,
+      default: "",
+    },
+    saved: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: 'post'
+      }
+    ],
+    story: {
+      type: String,
+      default: "",
+      maxlength: 200,
+    },
+    website: {
+      type: String,
+      default: "",
+    },
+    followers: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "user",
+      },
+    ],
+    following: [
+      {
+        type: mongoose.Types.ObjectId,
+        ref: "user",
+      },
+    ],
+    // Settings fields
+    theme: {
+      type: String,
+      default: "light",
+      enum: ["light", "dark"]
+    },
+    language: {
+      type: String,
+      default: "en"
+    },
+    autoPlayVideos: {
+      type: Boolean,
+      default: true
+    },
+    profileVisibility: {
+      type: String,
+      default: "public",
+      enum: ["public", "friends", "private"]
+    },
+    showOnlineStatus: {
+      type: Boolean,
+      default: true
+    },
+    pushNotifications: {
+      type: Boolean,
+      default: true
+    },
+    emailNotifications: {
+      type: Boolean,
+      default: false
+    },
+    soundEffects: {
+      type: Boolean,
+      default: true
+    },
+    twoFactorAuth: {
+      type: Boolean,
+      default: false
+    },
+    isBlocked: {
+      type: Boolean,
+      default: false
+    },
+    mustChangePassword: {
+      type: Boolean,
+      default: false
+    },
+    passwordResetCount: {
+      type: Number,
+      default: 0
+    },
+    notifications: [{
+      id: String,
+      type: String,
+      title: String,
+      message: String,
+      data: Schema.Types.Mixed,
+      timestamp: {
+        type: Date,
+        default: Date.now
+      },
+      read: {
+        type: Boolean,
+        default: false
+      }
+    }]
+  },
+  {
+    timestamps: true,
+  }
+);
+
+
+module.exports = mongoose.model('user', userSchema);
