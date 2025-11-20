@@ -68,7 +68,10 @@ const StoryDetailsModal = () => {
       const storyId = currentStory._id;
       if (!viewedStories.current.has(storyId)) {
         viewedStories.current.add(storyId);
-        dispatch(viewStory(storyId, auth.token));
+        // Defer dispatch to avoid updating parent components during render
+        setTimeout(() => {
+          dispatch(viewStory(storyId, auth.token));
+        }, 0);
       }
     }
   }, [currentStory, dispatch, auth.token, storyViewer.show]);
@@ -81,7 +84,8 @@ const StoryDetailsModal = () => {
   // Reset story index when modal opens and cleanup when it closes
   useEffect(() => {
     if (storyViewer.show && userStories) {
-      setCurrentStoryIndex(initialStoryIndex);
+      // Defer setting index to the next tick to avoid triggering state updates during render
+      setTimeout(() => setCurrentStoryIndex(initialStoryIndex), 0);
     } else if (!storyViewer.show) {
       // Clear viewed stories when modal closes
       viewedStories.current.clear();
