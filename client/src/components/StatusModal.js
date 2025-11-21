@@ -32,6 +32,7 @@ const StatusModal = () => {
   const videoRef = useRef();
   const refCanvas = useRef();
   const [tracks, setTracks] = useState("");
+  const isMounted = useRef(false);
 
   const handleChangeImages = (e) => {
     const files = [...e.target.files];
@@ -68,7 +69,8 @@ const StatusModal = () => {
           videoRef.current.srcObject = mediaStream;
           videoRef.current.play();
           const track = mediaStream.getTracks();
-          setTracks(track[0]);
+          // Only set tracks if component is still mounted
+          if (isMounted.current) setTracks(track[0]);
         })
         .catch((err) => console.log(err));
     }
@@ -144,14 +146,16 @@ const StatusModal = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        setLocation({
-          name: "Current Location",
-          address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-          coordinates: { latitude, longitude }
-        });
-        setShowLocationModal(false);
-        setIsLoadingLocation(false);
-        dispatch({ type: GLOBALTYPES.ALERT, payload: { success: "Location added successfully!" } });
+        if (isMounted.current) {
+          setLocation({
+            name: "Current Location",
+            address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+            coordinates: { latitude, longitude }
+          });
+          setShowLocationModal(false);
+          setIsLoadingLocation(false);
+          dispatch({ type: GLOBALTYPES.ALERT, payload: { success: "Location added successfully!" } });
+        }
       },
       (error) => {
         let errorMessage = "Unable to get location.";
@@ -166,8 +170,10 @@ const StatusModal = () => {
             errorMessage = "Location request timed out.";
             break;
         }
-        dispatch({ type: GLOBALTYPES.ALERT, payload: { error: errorMessage } });
-        setIsLoadingLocation(false);
+        if (isMounted.current) {
+          dispatch({ type: GLOBALTYPES.ALERT, payload: { error: errorMessage } });
+          setIsLoadingLocation(false);
+        }
       },
       { timeout: 10000, enableHighAccuracy: true }
     );
@@ -187,6 +193,7 @@ const StatusModal = () => {
       // Real API call to search users
       const response = await getDataAPI(`search?username=${searchTerm}&type=users&limit=10`, auth.token);
       
+      if (!isMounted.current) return;
       if (response.data && response.data.users) {
         setSearchResults(response.data.users);
       } else {
@@ -212,8 +219,10 @@ const StatusModal = () => {
         user.fullname.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
-      setSearchResults(filtered);
-      setIsSearchingUsers(false);
+      if (isMounted.current) {
+        setSearchResults(filtered);
+        setIsSearchingUsers(false);
+      }
     }
   };
 
@@ -237,7 +246,7 @@ const StatusModal = () => {
       });
     }
 
-    setIsSubmitting(true);
+    if (isMounted.current) setIsSubmitting(true);
 
     try {
       const postData = {
@@ -258,28 +267,30 @@ const StatusModal = () => {
         await dispatch(createPost(postData));
       }
 
-      // Clear form and close modal on success
-      setContent("");
-      setImages([]);
-      setLocation(null);
-      setTaggedUsers([]);
-      setFeeling("");
-      setActivity("");
-      setPrivacy("public");
-      setLocationSearch("");
-      setUserSearch("");
-      setSearchResults([]);
-      if (tracks) {
-        tracks.stop();
+      // Clear form and close modal on success (only if still mounted)
+      if (isMounted.current) {
+        setContent("");
+        setImages([]);
+        setLocation(null);
+        setTaggedUsers([]);
+        setFeeling("");
+        setActivity("");
+        setPrivacy("public");
+        setLocationSearch("");
+        setUserSearch("");
+        setSearchResults([]);
+        if (tracks) {
+          try { tracks.stop(); } catch(e) { /* ignore */ }
+        }
+        dispatch({
+          type: GLOBALTYPES.STATUS,
+          payload: false,
+        });
       }
-      dispatch({
-        type: GLOBALTYPES.STATUS,
-        payload: false,
-      });
     } catch (error) {
       console.error("Error creating post:", error);
     } finally {
-      setIsSubmitting(false);
+      if (isMounted.current) setIsSubmitting(false);
     }
   };
 
@@ -289,6 +300,17 @@ const StatusModal = () => {
       setImages(status.images);
     }
   }, [status]);
+
+  // Track mounted state and cleanup tracks on unmount
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      if (tracks && typeof tracks.stop === 'function') {
+        try { tracks.stop(); } catch (e) { /* ignore */ }
+      }
+    };
+  }, [tracks]);
 
   
 

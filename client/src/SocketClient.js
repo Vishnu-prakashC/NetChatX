@@ -130,7 +130,7 @@ const SocketClient = () => {
           msg.user.username + " " + msg.text,
           msg.user.avatar,
           msg.url,
-          "MESME"
+          "NetChatX"
         );
       });
       return () => socket.off("createNotifyToClient");

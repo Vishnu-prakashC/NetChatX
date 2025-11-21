@@ -56,34 +56,53 @@ function App() {
 
       // Add a small delay to ensure auth is fully settled
       const timer = setTimeout(() => {
-        const socket = io(process.env.NODE_ENV === 'production'
-          ? 'https://mysocial-lvsn.onrender.com'
-          : 'http://localhost:8080', {
-          transports: ['websocket', 'polling'],
-          withCredentials: true,
-          forceNew: false,
-          reconnection: true,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 5000,
-          reconnectionAttempts: 3,
-          timeout: 10000,
-          autoConnect: true
-        });
+        // Before creating socket, check server health to avoid noisy connection errors
+        const checkServer = async () => {
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 5000);
+            const res = await fetch('/api/health', { signal: controller.signal });
+            clearTimeout(timeout);
+            if (res.ok) {
+              const socket = io(process.env.NODE_ENV === 'production'
+                ? 'https://mysocial-lvsn.onrender.com'
+                : 'http://localhost:8080', {
+                transports: ['websocket', 'polling'],
+                withCredentials: true,
+                forceNew: false,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                reconnectionAttempts: 3,
+                timeout: 10000,
+                autoConnect: true
+              });
 
-        // Add connection event listeners for debugging
-        socket.on('connect', () => {
-          console.log('✅ Socket connected successfully');
-        });
+              // Add connection event listeners for debugging
+              socket.on('connect', () => {
+                console.log('✅ Socket connected successfully');
+              });
 
-        socket.on('disconnect', (reason) => {
-          console.log('❌ Socket disconnected:', reason);
-        });
+              socket.on('disconnect', (reason) => {
+                console.log('❌ Socket disconnected:', reason);
+              });
 
-        socket.on('connect_error', (error) => {
-          console.log('❌ Socket connection error:', error.message);
-        });
+              socket.on('connect_error', (error) => {
+                console.log('❌ Socket connection error:', error.message);
+              });
 
-        dispatch({ type: GLOBALTYPES.SOCKET, payload: socket });
+              dispatch({ type: GLOBALTYPES.SOCKET, payload: socket });
+            } else {
+              console.warn('Backend health check failed with status', res.status);
+              dispatch({ type: GLOBALTYPES.SOCKET, payload: null });
+            }
+          } catch (err) {
+            console.warn('Backend unreachable or health check timed out:', err && err.name ? err.name : err);
+            dispatch({ type: GLOBALTYPES.SOCKET, payload: null });
+          }
+        };
+
+        checkServer();
       }, 200);
 
       return () => {
@@ -132,7 +151,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    document.title = 'Mesme';
+    document.title = 'NetChatX';
   }, []);
 
   useEffect(() => {
@@ -162,7 +181,7 @@ function App() {
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }}></div>
-          <div>Loading MESME...</div>
+          <div>Loading NetChatX...</div>
         </div>
       </div>
     );

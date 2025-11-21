@@ -184,16 +184,14 @@ const RightSide = () => {
     };
 
     const scrollToMessage = (messageIndex) => {
-      const messageElements = document.querySelectorAll('.message-wrapper');
-      if (messageElements[messageIndex]) {
-        messageElements[messageIndex].scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-        // Highlight the message temporarily
-        messageElements[messageIndex].classList.add('search-highlight');
+      const messageElements = Array.from(document.querySelectorAll('.message-wrapper'));
+      const el = messageElements[messageIndex];
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight the message temporarily using the captured element reference
+        el.classList.add('search-highlight');
         setTimeout(() => {
-          messageElements[messageIndex].classList.remove('search-highlight');
+          if (el && el.classList) el.classList.remove('search-highlight');
         }, 2000);
       }
     };
@@ -246,12 +244,11 @@ const RightSide = () => {
       console.log('RightSide handleSubmit - sending message:', msg);
       setLoadMedia(false);
       await dispatch(addMessage({msg, auth, socket}));
-      if (refDisplay.current) {
-        refDisplay.current.scrollIntoView({
-          behaviour: "smooth",
-          block: "end",
-        });
-      }
+      // Safely scroll the messages container into view if available
+      refDisplay.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
     };
 
     useEffect(() => {
@@ -262,9 +259,8 @@ const RightSide = () => {
           
           setPage(1);
           await dispatch(getMessages({ auth, id }));
-          if(refDisplay.current){
-            refDisplay.current.scrollIntoView({behaviour: 'smooth', block: 'end'});
-          }
+          // Scroll to bottom when messages are loaded, if the container exists
+          refDisplay.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
         };
 
         getMessagesData();
@@ -284,7 +280,8 @@ const RightSide = () => {
           threshold: 0.1,
         }
       );
-      observer.observe(pageEnd.current);
+      // Only observe if the sentinel element is mounted
+      if (pageEnd.current) observer.observe(pageEnd.current);
     }, [setPage]);
 
     useEffect(() => {
@@ -295,24 +292,18 @@ const RightSide = () => {
 
     // Auto-scroll to bottom when new messages arrive
     useEffect(() => {
-      if (refDisplay.current && data.length > 0) {
-        refDisplay.current.scrollIntoView({
-          behavior: "smooth",
-          block: "end",
-        });
+      // Auto-scroll to bottom when new messages arrive (guarded)
+      if (data.length > 0) {
+        refDisplay.current?.scrollIntoView({ behavior: "smooth", block: "end" });
       }
     }, [data.length]);
 
     // Scroll to bottom when component mounts or conversation changes
     useEffect(() => {
-      if (refDisplay.current) {
-        setTimeout(() => {
-          refDisplay.current.scrollIntoView({
-            behavior: "smooth",
-            block: "end",
-          });
-        }, 100);
-      }
+      // When conversation changes, attempt a delayed scroll to bottom if the container exists
+      setTimeout(() => {
+        refDisplay.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 100);
     }, [id]);
 
     return (

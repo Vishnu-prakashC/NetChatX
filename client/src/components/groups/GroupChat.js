@@ -169,16 +169,13 @@ const GroupChat = () => {
 
   // Scroll to specific message
   const scrollToMessage = (messageId) => {
-    const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-    if (messageElement) {
-      messageElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      });
-      // Add highlight effect
-      messageElement.classList.add('search-highlight');
+    const el = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Add highlight effect using captured reference
+      el.classList.add('search-highlight');
       setTimeout(() => {
-        messageElement.classList.remove('search-highlight');
+        if (el && el.classList) el.classList.remove('search-highlight');
       }, 2000);
     }
   };
